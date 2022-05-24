@@ -25,6 +25,7 @@ async function run() {
     await client.connect();
     const productCollection = client.db("carParts").collection("product");
     const purchaseCollection = client.db("carParts").collection("purchase");
+    const reviewCollection = client.db("carParts").collection("review");
     
 
     //GET
@@ -49,6 +50,15 @@ async function run() {
       res.send(purchase);
     })
 
+    app.get("/review", async (req, res) => {
+      const query = {};
+      const cursor = reviewCollection.find(query);
+      const review = await cursor.toArray();
+      res.send(review);
+    });
+
+
+
     // POST
     app.post("/purchase", async (req, res) => {
       const purchase = req.body;
@@ -57,12 +67,12 @@ async function run() {
     });
 
 
-    // // POST
-    // app.post("/product", async (req, res) => {
-    //   const newProduct = req.body;
-    //   const result = await productCollection.insertOne(newProduct);
-    //   res.send(result);
-    // });
+    // POST
+    app.post("/review", async (req, res) => {
+      const newReview = req.body;
+      const result = await reviewCollection.insertOne(newReview);
+      res.send(result);
+    });
 
     // // DELETE
     // app.delete("/product/:id", async (req, res) => {
