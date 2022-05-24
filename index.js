@@ -24,7 +24,10 @@ async function run() {
   try {
     await client.connect();
     const productCollection = client.db("carParts").collection("product");
+    const purchaseCollection = client.db("carParts").collection("purchase");
+    
 
+    //GET
     app.get("/product", async (req, res) => {
       const query = {};
       const cursor = productCollection.find(query);
@@ -38,6 +41,14 @@ async function run() {
       const product = await productCollection.findOne(query);
       res.send(product);
     });
+
+    // POST
+    app.post("/purchase", async (req, res) => {
+      const purchase = req.body;
+      const result = await purchaseCollection.insertOne(purchase);
+      res.send(result);
+    });
+
 
     // // POST
     // app.post("/product", async (req, res) => {
