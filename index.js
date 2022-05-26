@@ -77,6 +77,13 @@ async function run() {
       }
     });
 
+    app.delete("/purchase/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: ObjectId(id) };
+      const result = await purchaseCollection.deleteOne(query);
+      res.send(result);
+    });
+
     app.get("/review", async (req, res) => {
       const query = {};
       const cursor = reviewCollection.find(query);
@@ -84,20 +91,34 @@ async function run() {
       res.send(review);
     });
 
-    app.get("/user",verifyJWT, async (req, res) => {
+    app.get("/user", verifyJWT, async (req, res) => {
       const users = await userCollection.find().toArray();
       res.send(users);
     });
 
-    //Admin Access
-    app.put("/user/admin/:email", async (req, res) => {
+    app.get('/admin/:email', async(req, res) =>{
       const email = req.params.email;
-      const filter = { email: email };
-      const updateDoc = {
-        $set: {role:'admin'},
-      };
-      const result = await userCollection.updateOne(filter, updateDoc);
-      res.send(result);
+      const user = await userCollection.findOne({email: email});
+      const isAdmin = user.role === 'admin';
+      res.send({admin: isAdmin})
+    })
+
+    //Admin Access
+    app.put("/user/admin/:email", verifyJWT, async (req, res) => {
+      const email = req.params.email;
+      const requester = req.decoded.email;
+      const requesterAccount = await userCollection.findOne({ email: requester });
+      if (requesterAccount.role === "admin") {
+        const filter = { email: email };
+        const updateDoc = {
+          $set: { role: "admin" },
+        };
+        const result = await userCollection.updateOne(filter, updateDoc);
+        res.send(result);
+      }
+      else{
+        return res.status(403).send({ message: "Forbidden access" });
+      }
     });
 
     //PUT
