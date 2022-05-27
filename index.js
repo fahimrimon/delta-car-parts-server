@@ -77,6 +77,13 @@ async function run() {
       }
     });
 
+    app.get('/purchase/:id', verifyJWT, async(req, res) =>{
+      const id = req.params.id;
+      const query = {_id: ObjectId(id)};
+      const purchase = await purchaseCollection.findOne(query);
+      res.send(purchase);
+    })
+
     app.delete("/purchase/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: ObjectId(id) };
