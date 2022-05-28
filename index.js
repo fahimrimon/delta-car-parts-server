@@ -3,6 +3,8 @@ const cors = require("cors");
 const jwt = require("jsonwebtoken");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+
 const port = process.env.PORT || 5000;
 const app = express();
 
@@ -42,6 +44,7 @@ async function run() {
     const purchaseCollection = client.db("carParts").collection("purchase");
     const reviewCollection = client.db("carParts").collection("review");
     const userCollection = client.db("carParts").collection("users");
+    const paymentCollection = client.db("carParts").collection("payments");
 
     //GET
     app.get("/product", async (req, res) => {
@@ -76,6 +79,21 @@ async function run() {
         return res.status(403).send({ message: "Forbidden access" });
       }
     });
+
+    //payment intent
+    app.post('/create-payment-intent', verifyJWT, async(req, res) =>{
+      const product = req.body;
+      const price = product.productPrice;
+      const amount = price*100;
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount : amount,
+        currency: 'usd',
+        payment_method_types:['card']
+      });
+      res.send({clientSecret: paymentIntent.client_secret})
+    });
+
+
 
     app.get('/purchase/:id', verifyJWT, async(req, res) =>{
       const id = req.params.id;
@@ -149,6 +167,22 @@ async function run() {
       res.send(result);
     });
 
+    app.patch('/purchase/:id', verifyJWT, async(req, res) =>{
+      const id  = req.params.id;
+      const payment = req.body;
+      const filter = {_id: ObjectId(id)};
+      const updatedDoc = {
+        $set: {
+          paid: true,
+          transactionId: payment.transactionId
+        }
+      }
+
+      const result = await paymentCollection.insertOne(payment);
+      const updatedPurchase = await purchaseCollection.updateOne(filter, updatedDoc);
+      res.send(updatedPurchase);
+    })
+
     // POST
     app.post("/review", async (req, res) => {
       const newReview = req.body;
@@ -156,29 +190,7 @@ async function run() {
       res.send(result);
     });
 
-    // // DELETE
-    // app.delete("/product/:id", async (req, res) => {
-    //   const id = req.params.id;
-    //   const query = { _id: ObjectId(id) };
-    //   const result = await productCollection.deleteOne(query);
-    //   res.send(result);
-    // });
-
-    // //update user
-    // app.put("/product/:id", async (req, res) => {
-    //   const id = req.params.id;
-    //   const updatedQuantity = req.body;
-    //   console.log(updatedQuantity);
-    //   const filter = { _id: ObjectId(id) };
-    //   const options = { upsert: true };
-    //   const updatedDoc = {
-    //     $set: {
-    //       quantity: updatedQuantity.quantity,
-    //     },
-    //   };
-    //   const result = await productCollection.updateOne(filter, updatedDoc, options);
-    //   res.send(result);
-    // });
+    
   } finally {
   }
 }
